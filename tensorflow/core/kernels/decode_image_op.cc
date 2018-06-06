@@ -27,7 +27,12 @@ limitations under the License.
 #include "tensorflow/core/lib/png/png_io.h"
 #include "tensorflow/core/lib/strings/str_util.h"
 #include "tensorflow/core/platform/logging.h"
-
+#include <time.h>
+#include <iostream>
+#include <unistd.h>
+#include <fstream>
+#include <string.h>
+//using namespace std;
 namespace tensorflow {
 namespace {
 
@@ -146,6 +151,8 @@ class DecodeImageOp : public OpKernel {
   }
 
   void Compute(OpKernelContext* context) override {
+	struct timespec t_start, t_end;
+	clock_gettime(CLOCK_REALTIME,&t_start);
     const Tensor& contents = context->input(0);
     OP_REQUIRES(context, TensorShapeUtils::IsScalar(contents.shape()),
                 errors::InvalidArgument("contents must be scalar, got shape ",
@@ -181,6 +188,15 @@ class DecodeImageOp : public OpKernel {
         LOG(FATAL) << "Should never get here after check above";
         break;
     }
+	clock_gettime(CLOCK_REALTIME,&t_end);
+    //cout<<"decode_image_op,t_start,"<<t_start.tv_sec<<"."<<t_start.tv_nsec<<",t_end,"<<t_end.tv_sec<<"."<<t_end.tv_nsec<<endl;
+    std::string op_name ="decode_image_op,";
+    std::string t_start_str = "t_start," + std::to_string(t_start.tv_sec) + "." + std::to_string(t_start.tv_nsec) + ",";
+    std::string t_end_str = "t_end," + std::to_string(t_end.tv_sec) + "." + std::to_string(t_end.tv_nsec) + "\n";
+    std::string result = op_name + t_start_str + t_end_str;
+    std::ofstream file;
+    file.open("TF_prepare.binary", std::ios::out | std::ios::app | std::ios::binary);
+    file << result;
   }
 
   void DecodeJpeg(OpKernelContext* context, StringPiece input) {

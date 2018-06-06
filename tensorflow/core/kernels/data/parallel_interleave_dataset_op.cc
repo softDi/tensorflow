@@ -22,7 +22,12 @@ limitations under the License.
 #include "tensorflow/core/kernels/data/dataset_utils.h"
 #include "tensorflow/core/lib/gtl/cleanup.h"
 #include "tensorflow/core/lib/random/random.h"
-
+#include <iostream>
+#include <time.h>
+#include <unistd.h>
+#include <fstream>
+#include <string.h>
+//using namespace std;
 namespace tensorflow {
 
 namespace {
@@ -42,6 +47,8 @@ class ParallelInterleaveDatasetOp : public UnaryDatasetOpKernel {
 
   void MakeDataset(OpKernelContext* ctx, DatasetBase* input,
                    DatasetBase** output) override {
+	struct timespec t_start,t_end;
+	clock_gettime(CLOCK_REALTIME,&t_start);
     OpInputList inputs;
     OP_REQUIRES_OK(ctx, ctx->input_list("other_arguments", &inputs));
     std::vector<Tensor> other_arguments;
@@ -87,6 +94,15 @@ class ParallelInterleaveDatasetOp : public UnaryDatasetOpKernel {
         new Dataset(input, std::move(captured_func), cycle_length, block_length,
                     sloppy, buffer_output_elements, prefetch_input_elements,
                     output_types_, output_shapes_);
+	clock_gettime(CLOCK_REALTIME,&t_end);
+	//cout<<"parallel_interleave_dataset_op,t_start,"<<t_start.tv_sec<<"."<<t_start.tv_nsec<<",t_end,"<<t_end.tv_sec<<"."<<t_end.tv_nsec<<endl;
+  std::string op_name ="parallel_interleave_dataset_op,";
+  std::string t_start_str = "t_start," + std::to_string(t_start.tv_sec) + "." + std::to_string(t_start.tv_nsec) + ",";
+  std::string t_end_str = "t_end," + std::to_string(t_end.tv_sec) + "." + std::to_string(t_end.tv_nsec) + "\n";
+  std::string result = op_name + t_start_str + t_end_str;
+  std::ofstream file;
+  file.open("TF_prepare.binary", std::ios::out | std::ios::app | std::ios::binary);
+  file << result;
   }
 
  private:
@@ -203,6 +219,8 @@ class ParallelInterleaveDatasetOp : public UnaryDatasetOpKernel {
       Status GetNextInternal(IteratorContext* ctx,
                              std::vector<Tensor>* out_tensors,
                              bool* end_of_sequence) override {
+		struct timespec t_start,t_end;
+		clock_gettime(CLOCK_REALTIME,&t_start);
         mutex_lock l(mu_);
         TF_RETURN_IF_ERROR(EnsureWorkerThreadsStarted(ctx));
         while (!cancelled_) {
@@ -277,6 +295,15 @@ class ParallelInterleaveDatasetOp : public UnaryDatasetOpKernel {
           if (!can_produce_elements && !input_impl_) {
             // No potential for future values.
             *end_of_sequence = true;
+			clock_gettime(CLOCK_REALTIME,&t_end);
+			//cout<<"parallel_interleave_iterator,t_start,"<<t_start.tv_sec<<"."<<t_start.tv_nsec<<",t_end,"<<t_end.tv_sec<<"."<<t_end.tv_nsec<<endl;
+      std::string op_name ="parallel_interleave_iterator,";
+      std::string t_start_str = "t_start," + std::to_string(t_start.tv_sec) + "." + std::to_string(t_start.tv_nsec) + ",";
+      std::string t_end_str = "t_end," + std::to_string(t_end.tv_sec) + "." + std::to_string(t_end.tv_nsec) + "\n";
+      std::string result = op_name + t_start_str + t_end_str;
+      std::ofstream file;
+      file.open("TF_prepare.binary", std::ios::out | std::ios::app | std::ios::binary);
+      file << result;
             return Status::OK();
           }
 

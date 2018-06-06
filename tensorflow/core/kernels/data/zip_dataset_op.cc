@@ -15,7 +15,12 @@ limitations under the License.
 #include "tensorflow/core/framework/partial_tensor_shape.h"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/kernels/data/dataset.h"
-
+#include <time.h>
+#include <iostream>
+#include <unistd.h>
+#include <fstream>
+#include <string.h>
+//using namespace std;
 namespace tensorflow {
 
 namespace {
@@ -28,6 +33,8 @@ class ZipDatasetOp : public DatasetOpKernel {
   explicit ZipDatasetOp(OpKernelConstruction* ctx) : DatasetOpKernel(ctx) {}
 
   void MakeDataset(OpKernelContext* ctx, DatasetBase** output) override {
+	struct timespec t_start,t_end;
+	clock_gettime(CLOCK_REALTIME, &t_start);
     std::vector<DatasetBase*> inputs;
     for (size_t i = 0; i < ctx->num_inputs(); ++i) {
       DatasetBase* input;
@@ -35,6 +42,15 @@ class ZipDatasetOp : public DatasetOpKernel {
       inputs.push_back(input);
     }
     *output = new Dataset(ctx, inputs);
+	clock_gettime(CLOCK_REALTIME, &t_end);
+	//cout<<"zip_dataset_op,t_start,"<<t_start.tv_sec<<"."<<t_start.tv_nsec<<",t_end,"<<t_end.tv_sec<<"."<<t_end.tv_nsec<<endl;
+  std::string op_name ="zip_dataset_op,";
+  std::string t_start_str = "t_start," + std::to_string(t_start.tv_sec) + "." + std::to_string(t_start.tv_nsec) + ",";
+  std::string t_end_str = "t_end," + std::to_string(t_end.tv_sec) + "." + std::to_string(t_end.tv_nsec) + "\n";
+  std::string result = op_name + t_start_str + t_end_str;
+  std::ofstream file;
+  file.open("TF_prepare.binary", std::ios::out | std::ios::app | std::ios::binary);
+  file << result;
   }
 
  private:
@@ -107,6 +123,8 @@ class ZipDatasetOp : public DatasetOpKernel {
       Status GetNextInternal(IteratorContext* ctx,
                              std::vector<Tensor>* out_tensors,
                              bool* end_of_sequence) override {
+		struct timespec t_start,t_end;  
+		clock_gettime(CLOCK_REALTIME,&t_start);
         mutex_lock l(mu_);
         if (input_impls_.empty()) {
           *end_of_sequence = true;
@@ -128,6 +146,15 @@ class ZipDatasetOp : public DatasetOpKernel {
           out_tensors->clear();
           input_impls_.clear();
         }
+		clock_gettime(CLOCK_REALTIME,&t_end);
+		//cout<<"zip_dataset_iterator,t_start,"<<t_start.tv_sec<<"."<<t_start.tv_nsec<<",t_end,"<<t_end.tv_sec<<"."<<t_end.tv_nsec<<endl;
+    std::string op_name ="zip_dataset_iterator,";
+    std::string t_start_str = "t_start," + std::to_string(t_start.tv_sec) + "." + std::to_string(t_start.tv_nsec) + ",";
+    std::string t_end_str = "t_end," + std::to_string(t_end.tv_sec) + "." + std::to_string(t_end.tv_nsec) + "\n";
+    std::string result = op_name + t_start_str + t_end_str;
+    std::ofstream file;
+    file.open("TF_prepare.binary", std::ios::out | std::ios::app | std::ios::binary);
+    file << result;
         return Status::OK();
       }
 

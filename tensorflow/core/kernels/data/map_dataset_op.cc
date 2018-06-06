@@ -18,7 +18,12 @@ limitations under the License.
 #include "tensorflow/core/kernels/data/captured_function.h"
 #include "tensorflow/core/kernels/data/dataset.h"
 #include "tensorflow/core/lib/random/random.h"
-
+#include <iostream>
+#include <time.h>
+#include <unistd.h>
+#include <fstream>
+#include <string.h>
+//using namespace std;
 namespace tensorflow {
 
 namespace {
@@ -38,6 +43,8 @@ class MapDatasetOp : public UnaryDatasetOpKernel {
 
   void MakeDataset(OpKernelContext* ctx, DatasetBase* input,
                    DatasetBase** output) override {
+	struct timespec t_start,t_end;
+	clock_gettime(CLOCK_REALTIME,&t_start);
     OpInputList inputs;
     OP_REQUIRES_OK(ctx, ctx->input_list("other_arguments", &inputs));
     std::vector<Tensor> other_arguments;
@@ -52,6 +59,15 @@ class MapDatasetOp : public UnaryDatasetOpKernel {
 
     *output = new Dataset(ctx, input, func_, std::move(captured_func),
                           output_types_, output_shapes_);
+	clock_gettime(CLOCK_REALTIME,&t_end);
+	//cout<<"map_dataset_op,t_start,"<<t_start.tv_sec<<"."<<t_start.tv_nsec<<",t_end,"<<t_end.tv_sec<<"."<<t_end.tv_nsec<<endl;
+  std::string op_name ="map_dataset_op,";
+  std::string t_start_str = "t_start," + std::to_string(t_start.tv_sec) + "." + std::to_string(t_start.tv_nsec) + ",";
+  std::string t_end_str = "t_end," + std::to_string(t_end.tv_sec) + "." + std::to_string(t_end.tv_nsec) + "\n";
+  std::string result = op_name + t_start_str + t_end_str;
+  std::ofstream file;
+  file.open("TF_prepare.binary", std::ios::out | std::ios::app | std::ios::binary);
+  file << result;
   }
 
  private:
@@ -129,6 +145,8 @@ class MapDatasetOp : public UnaryDatasetOpKernel {
       Status GetNextInternal(IteratorContext* ctx,
                              std::vector<Tensor>* out_tensors,
                              bool* end_of_sequence) override {
+		struct timespec t_start,t_end;
+		clock_gettime(CLOCK_REALTIME,&t_start);
         // NOTE(mrry): This method is thread-safe as long as
         // `input_impl_` and `f` are thread-safe. However, if multiple
         // threads enter this method, outputs may be observed in a
@@ -148,6 +166,15 @@ class MapDatasetOp : public UnaryDatasetOpKernel {
           // `f` may deliberately raise `errors::OutOfRange` to indicate
           // that we should terminate the iteration early.
           *end_of_sequence = true;
+		  clock_gettime(CLOCK_REALTIME,&t_end);
+		  //cout<<"map_dataset_iterator,t_start,"<<t_start.tv_sec<<"."<<t_start.tv_nsec<<",t_end,"<<t_end.tv_sec<<"."<<t_end.tv_nsec<<endl;
+      std::string op_name ="map_dataset_iterator,";
+      std::string t_start_str = "t_start," + std::to_string(t_start.tv_sec) + "." + std::to_string(t_start.tv_nsec) + ",";
+      std::string t_end_str = "t_end," + std::to_string(t_end.tv_sec) + "." + std::to_string(t_end.tv_nsec) + "\n";
+      std::string result = op_name + t_start_str + t_end_str;
+      std::ofstream file;
+      file.open("TF_prepare.binary", std::ios::out | std::ios::app | std::ios::binary);
+      file << result;    
           return Status::OK();
         } else {
           return s;

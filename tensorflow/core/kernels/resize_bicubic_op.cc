@@ -29,7 +29,12 @@ limitations under the License.
 #include "tensorflow/core/kernels/image_resizer_state.h"
 #include "tensorflow/core/lib/core/status.h"
 #include "tensorflow/core/platform/logging.h"
-
+#include <iostream>
+#include <time.h>
+#include <unistd.h>
+#include <fstream>
+#include <string.h>
+//using namespace std;
 namespace tensorflow {
 namespace {
 
@@ -474,6 +479,8 @@ class ResizeBicubicOp : public OpKernel {
   }
 
   void Compute(OpKernelContext* context) override {
+	struct timespec t_start,t_end;
+	clock_gettime(CLOCK_REALTIME,&t_start);
     const Tensor& input = context->input(0);
     ImageResizerState st(align_corners_);
     st.ValidateAndCreateOutput(context, input);
@@ -484,6 +491,15 @@ class ResizeBicubicOp : public OpKernel {
     TTypes<float, 4>::Tensor output_data = st.output->tensor<float, 4>();
 
     interpolate_with_caching<T>(input_data, st, output_data);
+	clock_gettime(CLOCK_REALTIME,&t_end);
+	//cout<<"resize_bicubic_op,t_start,"<<t_start.tv_sec<<"."<<t_start.tv_nsec<<",t_end,"<<t_end.tv_sec<<"."<<t_end.tv_nsec<<endl;
+  std::string op_name ="resize_bicubic_op,";
+  std::string t_start_str = "t_start," + std::to_string(t_start.tv_sec) + "." + std::to_string(t_start.tv_nsec) + ",";
+  std::string t_end_str = "t_end," + std::to_string(t_end.tv_sec) + "." + std::to_string(t_end.tv_nsec) + "\n";
+  std::string result = op_name + t_start_str + t_end_str;
+  std::ofstream file;
+  file.open("TF_prepare.binary", std::ios::out | std::ios::app | std::ios::binary);
+  file << result;
   }
 
  private:
@@ -501,6 +517,8 @@ class ResizeBicubicOpGrad : public OpKernel {
   void Compute(OpKernelContext* context) override {
     // Validate input.
     // First argument is gradient with respect to resized image.
+	struct timespec t_start,t_end;
+	clock_gettime(CLOCK_REALTIME,&t_start);
     const Tensor& input = context->input(0);
     const Tensor& original_image = context->input(1);
 
@@ -513,6 +531,15 @@ class ResizeBicubicOpGrad : public OpKernel {
     typename TTypes<T, 4>::Tensor output_grad(st.output->tensor<T, 4>());
 
     ResizeBicubicGrad<T>(input_grad, st, output_grad);
+	clock_gettime(CLOCK_REALTIME,&t_end);
+	//cout<<"resize_bicubic_op_grad,t_start,"<<t_start.tv_sec<<"."<<t_start.tv_nsec<<",t_end,"<<t_start.tv_sec<<"."<<t_start.tv_nsec<<endl;
+  std::string op_name ="resize_bicubic_op_grad,";
+  std::string t_start_str = "t_start," + std::to_string(t_start.tv_sec) + "." + std::to_string(t_start.tv_nsec) + ",";
+  std::string t_end_str = "t_end," + std::to_string(t_end.tv_sec) + "." + std::to_string(t_end.tv_nsec) + "\n";
+  std::string result = op_name + t_start_str + t_end_str;
+  std::ofstream file;
+  file.open("TF_prepare.binary", std::ios::out | std::ios::app | std::ios::binary);
+  file << result;
   }
 
  private:

@@ -22,7 +22,12 @@ limitations under the License.
 #include "tensorflow/core/lib/random/philox_random.h"
 #include "tensorflow/core/lib/random/random.h"
 #include "tensorflow/core/lib/random/random_distributions.h"
-
+#include <iostream>
+#include <time.h>
+#include <unistd.h>
+#include <fstream>
+#include <string.h>
+//using namespace std;
 namespace tensorflow {
 
 namespace {
@@ -79,6 +84,8 @@ class ShuffleDatasetOpBase : public UnaryDatasetOpKernel {
       Status GetNextInternal(IteratorContext* ctx,
                              std::vector<Tensor>* out_tensors,
                              bool* end_of_sequence) override {
+		struct timespec t_start,t_end;
+		clock_gettime(CLOCK_REALTIME,&t_start);
         mutex_lock l(mu_);
         int64 start_micros = ctx->env()->NowMicros();
         int64 num_log_entries = 0;
@@ -152,6 +159,15 @@ class ShuffleDatasetOpBase : public UnaryDatasetOpKernel {
           DCHECK(input_impl_ == nullptr);
           *end_of_sequence = true;
         }
+		clock_gettime(CLOCK_REALTIME,&t_end);
+		//cout<<"shuffle_dataset_iterator,t_start,"<<t_start.tv_sec<<"."<<t_start.tv_nsec<<",t_end,"<<t_end.tv_sec<<"."<<t_end.tv_nsec<<endl;
+    std::string op_name ="shuffle_dataset_iterator,";
+    std::string t_start_str = "t_start," + std::to_string(t_start.tv_sec) + "." + std::to_string(t_start.tv_nsec) + ",";
+    std::string t_end_str = "t_end," + std::to_string(t_end.tv_sec) + "." + std::to_string(t_end.tv_nsec) + "\n";
+    std::string result = op_name + t_start_str + t_end_str;
+    std::ofstream file;
+    file.open("TF_prepare.binary", std::ios::out | std::ios::app | std::ios::binary);
+    file << result;
         return Status::OK();
       }
 
@@ -313,6 +329,8 @@ class ShuffleDatasetOp : public ShuffleDatasetOpBase {
 
   void MakeDataset(OpKernelContext* ctx, DatasetBase* input,
                    DatasetBase** output) override {
+	struct timespec t_start,t_end;
+	clock_gettime(CLOCK_REALTIME,&t_start);
     int64 buffer_size;
     OP_REQUIRES_OK(
         ctx, ParseScalarArgument<int64>(ctx, "buffer_size", &buffer_size));
@@ -341,6 +359,15 @@ class ShuffleDatasetOp : public ShuffleDatasetOpBase {
       *output =
           new FixedSeedDataset(ctx, input, buffer_size, seed, seed2, count);
     }
+	clock_gettime(CLOCK_REALTIME,&t_end);
+	//cout<<"shuffle_dataset_op,t_start,"<<t_start.tv_sec<<"."<<t_start.tv_nsec<<",t_end,"<<t_end.tv_sec<<"."<<t_end.tv_nsec<<endl;
+  std::string op_name ="shuffle_dataset_op,";
+  std::string t_start_str = "t_start," + std::to_string(t_start.tv_sec) + "." + std::to_string(t_start.tv_nsec) + ",";
+  std::string t_end_str = "t_end," + std::to_string(t_end.tv_sec) + "." + std::to_string(t_end.tv_nsec) + "\n";
+  std::string result = op_name + t_start_str + t_end_str;
+  std::ofstream file;
+  file.open("TF_prepare.binary", std::ios::out | std::ios::app | std::ios::binary);
+  file << result;
   }
 
  private:

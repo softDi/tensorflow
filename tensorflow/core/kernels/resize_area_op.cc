@@ -27,7 +27,12 @@ limitations under the License.
 #include "tensorflow/core/kernels/image_resizer_state.h"
 #include "tensorflow/core/lib/core/status.h"
 #include "tensorflow/core/platform/logging.h"
-
+#include <iostream>
+#include <time.h>
+#include <unistd.h>
+#include <fstream>
+#include <string.h>
+//using namespace std;
 namespace tensorflow {
 
 typedef Eigen::ThreadPoolDevice CPUDevice;
@@ -143,6 +148,8 @@ class ResizeAreaOp : public OpKernel {
   }
 
   void Compute(OpKernelContext* context) override {
+	struct timespec t_start,t_end;
+	clock_gettime(CLOCK_REALTIME,&t_start);
     const Tensor& input = context->input(0);
     ImageResizerState st(align_corners_);
     st.ValidateAndCreateOutput(context, input);
@@ -184,6 +191,15 @@ class ResizeAreaOp : public OpKernel {
     } else {
       ComputeLoop<-1>(st, x_interps, input_data);
     }
+	clock_gettime(CLOCK_REALTIME,&t_end);
+	//cout<<"resize_area,t_start,"<<t_start.tv_sec<<"."<<t_start.tv_nsec<<",t_end,"<<t_end.tv_sec<<"."<<t_end.tv_nsec<<endl;
+  std::string op_name ="resize_area_op,";
+  std::string t_start_str = "t_start," + std::to_string(t_start.tv_sec) + "." + std::to_string(t_start.tv_nsec) + ",";
+  std::string t_end_str = "t_end," + std::to_string(t_end.tv_sec) + "." + std::to_string(t_end.tv_nsec) + "\n";
+  std::string result = op_name + t_start_str + t_end_str;
+  std::ofstream file;
+  file.open("TF_prepare.binary", std::ios::out | std::ios::app | std::ios::binary);
+  file << result;
   }
 
   template <int64 kKnownNumChannels>

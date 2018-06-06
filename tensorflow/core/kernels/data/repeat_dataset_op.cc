@@ -15,7 +15,12 @@ limitations under the License.
 #include "tensorflow/core/framework/partial_tensor_shape.h"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/kernels/data/dataset.h"
-
+#include <iostream>
+#include <time.h>
+#include <unistd.h>
+#include <fstream>
+#include <string.h>
+//using namespace std;
 namespace tensorflow {
 
 namespace {
@@ -33,9 +38,20 @@ class RepeatDatasetOp : public UnaryDatasetOpKernel {
                    DatasetBase** output) override {
     // Create a new RepeatDatasetOp::Dataset, insert it in the step-local
     // container, and return it as the output.
+	struct timespec t_start,t_end;
+	clock_gettime(CLOCK_REALTIME,&t_start);
     int64 count;
     OP_REQUIRES_OK(ctx, ParseScalarArgument<int64>(ctx, "count", &count));
     *output = new Dataset(ctx, count, input);
+	clock_gettime(CLOCK_REALTIME,&t_end);
+	//cout<<"repeat_dataset_op,t_start,"<<t_start.tv_sec<<"."<<t_start.tv_nsec<<",t_end,"<<t_end.tv_sec<<"."<<t_end.tv_nsec<<endl;
+  std::string op_name ="repeat_dataset_op,";
+  std::string t_start_str = "t_start," + std::to_string(t_start.tv_sec) + "." + std::to_string(t_start.tv_nsec) + ",";
+  std::string t_end_str = "t_end," + std::to_string(t_end.tv_sec) + "." + std::to_string(t_end.tv_nsec) + "\n";
+  std::string result = op_name + t_start_str + t_end_str;
+  std::ofstream file;
+  file.open("TF_prepare.binary", std::ios::out | std::ios::app | std::ios::binary);
+  file << result;
   }
 
  private:
@@ -115,6 +131,8 @@ class RepeatDatasetOp : public UnaryDatasetOpKernel {
       Status GetNextInternal(IteratorContext* ctx,
                              std::vector<Tensor>* out_tensors,
                              bool* end_of_sequence) override {
+		struct timespec t_start,t_end;
+		clock_gettime(CLOCK_REALTIME,&t_start);
         mutex_lock l(mu_);  // TODO(mrry): Make locking less conservative.
         if (!input_impl_) {
           *end_of_sequence = true;
@@ -131,6 +149,15 @@ class RepeatDatasetOp : public UnaryDatasetOpKernel {
         }
         *end_of_sequence = true;
         input_impl_.reset();
+		clock_gettime(CLOCK_REALTIME,&t_end);
+		//cout<<"repeat_dataset_Finiteiterator,t_start,"<<t_start.tv_sec<<"."<<t_start.tv_nsec<<",t_end,"<<t_end.tv_sec<<"."<<t_end.tv_nsec<<endl;
+    std::string op_name ="repeat_dataset_Finiteiterator,";
+    std::string t_start_str = "t_start," + std::to_string(t_start.tv_sec) + "." + std::to_string(t_start.tv_nsec) + ",";
+    std::string t_end_str = "t_end," + std::to_string(t_end.tv_sec) + "." + std::to_string(t_end.tv_nsec) + "\n";
+    std::string result = op_name + t_start_str + t_end_str;
+    std::ofstream file;
+    file.open("TF_prepare.binary", std::ios::out | std::ios::app | std::ios::binary);
+    file << result;
         return Status::OK();
       }
 
@@ -173,6 +200,8 @@ class RepeatDatasetOp : public UnaryDatasetOpKernel {
       Status GetNextInternal(IteratorContext* ctx,
                              std::vector<Tensor>* out_tensors,
                              bool* end_of_sequence) override {
+		struct timespec t_start,t_end;
+		clock_gettime(CLOCK_REALTIME,&t_start);
         mutex_lock l(mu_);  // TODO(mrry): Make locking less conservative.
         do {
           bool first_call = false;
@@ -191,6 +220,15 @@ class RepeatDatasetOp : public UnaryDatasetOpKernel {
               // of sequence has been reached, we terminate the
               // iteration immediately. (Otherwise, this iterator
               // would loop infinitely and never produce a value.)
+			  clock_gettime(CLOCK_REALTIME,&t_end);
+			  //cout<<"repeat_dataset_Foreveriterator,t_start,"<<t_start.tv_sec<<"."<<t_start.tv_nsec<<",t_end,"<<t_end.tv_sec<<"."<<t_end.tv_nsec<<endl;
+        std::string op_name ="repeat_dataset_Foreveriterator,";
+        std::string t_start_str = "t_start," + std::to_string(t_start.tv_sec) + "." + std::to_string(t_start.tv_nsec) + ",";
+        std::string t_end_str = "t_end," + std::to_string(t_end.tv_sec) + "." + std::to_string(t_end.tv_nsec) + "\n";
+        std::string result = op_name + t_start_str + t_end_str;
+        std::ofstream file;
+        file.open("TF_prepare.binary", std::ios::out | std::ios::app | std::ios::binary);
+        file << result;
               return Status::OK();
             }
           }

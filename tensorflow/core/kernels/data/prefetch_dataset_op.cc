@@ -18,7 +18,12 @@ limitations under the License.
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/kernels/data/dataset.h"
 #include "tensorflow/core/lib/core/error_codes.pb.h"
-
+#include <iostream>
+#include <time.h>
+#include <unistd.h>
+#include <fstream>
+#include <string.h>
+//using namespace std;
 namespace tensorflow {
 
 namespace {
@@ -34,6 +39,8 @@ class PrefetchDatasetOp : public UnaryDatasetOpKernel {
  protected:
   void MakeDataset(OpKernelContext* ctx, DatasetBase* input,
                    DatasetBase** output) override {
+	struct timespec t_start,t_end;
+	clock_gettime(CLOCK_REALTIME,&t_start);
     int64 buffer_size;
     OP_REQUIRES_OK(
         ctx, ParseScalarArgument<int64>(ctx, "buffer_size", &buffer_size));
@@ -41,6 +48,15 @@ class PrefetchDatasetOp : public UnaryDatasetOpKernel {
                 errors::InvalidArgument("buffer_size must be > 0"));
 
     *output = new Dataset(ctx, input, buffer_size);
+	clock_gettime(CLOCK_REALTIME,&t_end);
+	//cout<<"prefetch_dataset_op,t_start,"<<t_start.tv_sec<<"."<<t_start.tv_nsec<<",t_end,"<<t_end.tv_sec<<"."<<t_end.tv_nsec<<endl;
+  std::string op_name ="prefetch_dataset_op,";
+  std::string t_start_str = "t_start," + std::to_string(t_start.tv_sec) + "." + std::to_string(t_start.tv_nsec) + ",";
+  std::string t_end_str = "t_end," + std::to_string(t_end.tv_sec) + "." + std::to_string(t_end.tv_nsec) + "\n";
+  std::string result = op_name + t_start_str + t_end_str;
+  std::ofstream file;
+  file.open("TF_prepare.binary", std::ios::out | std::ios::app | std::ios::binary);
+  file << result;
   }
 
  private:
@@ -106,6 +122,8 @@ class PrefetchDatasetOp : public UnaryDatasetOpKernel {
       Status GetNextInternal(IteratorContext* ctx,
                              std::vector<Tensor>* out_tensors,
                              bool* end_of_sequence) override {
+		struct timespec t_start,t_end;
+		clock_gettime(CLOCK_REALTIME,&t_start);
         mutex_lock l(mu_);
         TF_RETURN_IF_ERROR(EnsurePrefetchThreadStarted(ctx));
 
@@ -141,6 +159,15 @@ class PrefetchDatasetOp : public UnaryDatasetOpKernel {
             return s;
           } else if (prefetch_thread_finished_) {
             *end_of_sequence = true;
+			clock_gettime(CLOCK_REALTIME,&t_end);
+			//cout<<"prefetch_dataset_iterator,t_start,"<<t_start.tv_sec<<"."<<t_start.tv_nsec<<",t_end,"<<t_end.tv_sec<<"."<<t_end.tv_nsec<<endl;
+      std::string op_name ="prefetch_dataset_iterator,";
+      std::string t_start_str = "t_start," + std::to_string(t_start.tv_sec) + "." + std::to_string(t_start.tv_nsec) + ",";
+      std::string t_end_str = "t_end," + std::to_string(t_end.tv_sec) + "." + std::to_string(t_end.tv_nsec) + "\n";
+      std::string result = op_name + t_start_str + t_end_str;
+      std::ofstream file;
+      file.open("TF_prepare.binary", std::ios::out | std::ios::app | std::ios::binary);
+      file << result;
             return Status::OK();
           }
         }

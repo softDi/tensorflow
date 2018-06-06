@@ -33,7 +33,11 @@ limitations under the License.
 #include "tensorflow/core/platform/logging.h"
 #include "tensorflow/core/util/guarded_philox_random.h"
 #include "tensorflow/core/util/work_sharder.h"
-
+#include <iostream>
+#include <time.h>
+#include <unistd.h>
+#include <fstream>
+#include <string.h>
 #if EIGEN_COMP_GNUC && __cplusplus > 199711L
 #define DISABLE_FLOAT_EQUALITY_WARNING \
   _Pragma("GCC diagnostic push")       \
@@ -43,7 +47,7 @@ limitations under the License.
 #define DISABLE_FLOAT_EQUALITY_WARNING
 #define ENABLE_FLOAT_EQUALITY_WARNING
 #endif
-
+//using namespace std;
 namespace tensorflow {
 
 typedef Eigen::ThreadPoolDevice CPUDevice;
@@ -221,6 +225,8 @@ class RandomUniformIntOp : public OpKernel {
   }
 
   void Compute(OpKernelContext* ctx) override {
+	struct timespec t_start,t_end;
+	clock_gettime(CLOCK_REALTIME,&t_start);
     const Tensor& shape = ctx->input(0);
     const Tensor& minval = ctx->input(1);
     const Tensor& maxval = ctx->input(2);
@@ -252,6 +258,15 @@ class RandomUniformIntOp : public OpKernel {
         // it just here.
         generator_.ReserveRandomOutputs(output_flat.size(), 256),
         output_flat.data(), output_flat.size(), dist);
+	clock_gettime(CLOCK_REALTIME,&t_end);
+	//cout<<"random_op,t_start,"<<t_start.tv_sec<<"."<<t_start.tv_nsec<<",t_end,"<<t_end.tv_sec<<"."<<t_end.tv_nsec<<endl; 
+  std::string op_name ="random_op,";
+  std::string t_start_str = "t_start," + std::to_string(t_start.tv_sec) + "." + std::to_string(t_start.tv_nsec) + ",";
+  std::string t_end_str = "t_end," + std::to_string(t_end.tv_sec) + "." + std::to_string(t_end.tv_nsec) + "\n";
+  std::string result = op_name + t_start_str + t_end_str;
+  std::ofstream file;
+  file.open("TF_prepare.binary", std::ios::out | std::ios::app | std::ios::binary);
+  file << result;
   }
 
  private:

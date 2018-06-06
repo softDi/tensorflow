@@ -28,7 +28,12 @@ limitations under the License.
 #include "tensorflow/core/kernels/image_resizer_state.h"
 #include "tensorflow/core/lib/core/status.h"
 #include "tensorflow/core/platform/logging.h"
-
+//#include <iostream>
+#include <time.h>
+#include <unistd.h>
+#include <fstream>
+#include <string.h>
+//using namespace std;
 namespace tensorflow {
 
 typedef Eigen::ThreadPoolDevice CPUDevice;
@@ -42,6 +47,9 @@ class ResizeBilinearOp : public OpKernel {
   }
 
   void Compute(OpKernelContext* context) override {
+	//std::cout<<"In resize_bilinear_op Mother Fucker!!";  
+	struct timespec t_start, t_end;
+	clock_gettime(CLOCK_REALTIME,&t_start);
     const Tensor& input = context->input(0);
     ImageResizerState st(align_corners_);
     st.ValidateAndCreateOutput(context, input);
@@ -57,6 +65,16 @@ class ResizeBilinearOp : public OpKernel {
     functor::ResizeBilinear<Device, T>()(context->eigen_device<Device>(),
                                          image_data, st.height_scale,
                                          st.width_scale, output_data);
+	clock_gettime(CLOCK_REALTIME,&t_end);
+	//cout<<"resize_bilinear_op,t_start,"<<t_start.tv_sec<<"."<<t_start.tv_nsec<<",t_end,"<<t_end.tv_sec<<"."<<t_end.tv_nsec<<endl;
+	std::string op_name ="resize_bilinear_op,";
+	std::string t_start_str = "t_start," + std::to_string(t_start.tv_sec) + "." + std::to_string(t_start.tv_nsec) + ",";
+	std::string t_end_str = "t_end," + std::to_string(t_end.tv_sec) + "." + std::to_string(t_end.tv_nsec) + "\n";
+	std::string result = op_name + t_start_str + t_end_str;
+	std::ofstream file;
+	file.open("TF_prepare.binary", std::ios::out | std::ios::app | std::ios::binary);
+	file << result;
+	
   }
 
  private:
@@ -249,6 +267,8 @@ class ResizeBilinearOpGrad : public OpKernel {
   void Compute(OpKernelContext* context) override {
     // Validate input.
     // First argument is gradient with respect to resized image.
+	struct timespec t_start,t_end;
+	clock_gettime(CLOCK_REALTIME,&t_start);
     const Tensor& input = context->input(0);
     const Tensor& original_image = context->input(1);
 
@@ -263,6 +283,15 @@ class ResizeBilinearOpGrad : public OpKernel {
     functor::ResizeBilinearGrad<Device, T>()(context->eigen_device<Device>(),
                                              input_grad, st.height_scale,
                                              st.width_scale, output_grad);
+    clock_gettime(CLOCK_REALTIME,&t_end);
+	//cout<<"reisze_bilinear_op_grad,t_start,"<<t_start.tv_sec<<"."<<t_start.tv_nsec<<",t_end,"<<t_end.tv_sec<<"."<<t_end.tv_nsec<<endl;
+    std::string op_name ="resize_bilinear_op_grad,";
+    std::string t_start_str = "t_start," + std::to_string(t_start.tv_sec) + "." + std::to_string(t_start.tv_nsec) + ",";
+    std::string t_end_str = "t_end," + std::to_string(t_end.tv_sec) + "." + std::to_string(t_end.tv_nsec) + "\n";
+    std::string result = op_name + t_start_str + t_end_str;
+    std::ofstream file;
+    file.open("TF_prepare.binary", std::ios::out | std::ios::app | std::ios::binary);
+    file << result;
   }
 
  private:

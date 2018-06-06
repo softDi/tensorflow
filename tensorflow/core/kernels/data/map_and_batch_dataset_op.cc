@@ -24,6 +24,12 @@ limitations under the License.
 #include "tensorflow/core/lib/random/random.h"
 #include "tensorflow/core/lib/strings/strcat.h"
 #include "tensorflow/core/platform/tracing.h"
+#include <time.h>
+#include <iostream>
+#include <unistd.h>
+#include <fstream>
+#include <string.h>
+//using namespace std;
 
 namespace tensorflow {
 
@@ -45,6 +51,8 @@ class MapAndBatchDatasetOp : public UnaryDatasetOpKernel {
  protected:
   void MakeDataset(OpKernelContext* ctx, DatasetBase* input,
                    DatasetBase** output) override {
+	struct timespec t_start,t_end;
+	clock_gettime(CLOCK_REALTIME,&t_start);
     OpInputList inputs;
     OP_REQUIRES_OK(ctx, ctx->input_list("other_arguments", &inputs));
     std::vector<Tensor> other_arguments;
@@ -73,6 +81,15 @@ class MapAndBatchDatasetOp : public UnaryDatasetOpKernel {
     *output = new Dataset(input, batch_size, num_parallel_batches,
                           output_types_, output_shapes_,
                           std::move(captured_func), &ctx->eigen_cpu_device());
+	clock_gettime(CLOCK_REALTIME,&t_end);
+	//cout<<"map_and_batch_dataset_op,t_start,"<<t_start.tv_sec<<"."<<t_start.tv_nsec<<",t_end,"<<t_end.tv_sec<<"."<<t_end.tv_nsec<<endl;
+  std::string op_name ="map_and_batch_dataset_op,";
+  std::string t_start_str = "t_start," + std::to_string(t_start.tv_sec) + "." + std::to_string(t_start.tv_nsec) + ",";
+  std::string t_end_str = "t_end," + std::to_string(t_end.tv_sec) + "." + std::to_string(t_end.tv_nsec) + "\n";
+  std::string result = op_name + t_start_str + t_end_str;
+  std::ofstream file;
+  file.open("TF_prepare.binary", std::ios::out | std::ios::app | std::ios::binary);
+  file << result;
   }
 
  private:
@@ -156,6 +173,8 @@ class MapAndBatchDatasetOp : public UnaryDatasetOpKernel {
       Status GetNextInternal(IteratorContext* ctx,
                              std::vector<Tensor>* out_tensors,
                              bool* end_of_sequence) override {
+		struct timespec t_start,t_end;
+		clock_gettime(CLOCK_REALTIME,&t_start);
         mutex_lock l(mu_);
 
         // One-time initialization.
@@ -200,6 +219,15 @@ class MapAndBatchDatasetOp : public UnaryDatasetOpKernel {
         StartInvocationBatch(ctx, current_batch_index_);
         current_batch_index_ =
             (current_batch_index_ + 1) % dataset()->num_parallel_batches_;
+		clock_gettime(CLOCK_REALTIME,&t_end);
+		//cout<<"map_and_batch_dataset_iterator,t_start,"<<t_start.tv_sec<<"."<<t_start.tv_nsec<<",t_end,"<<t_end.tv_sec<<"."<<t_end.tv_nsec<<endl;
+    std::string op_name ="map_and_batch_dataset_iterator,";
+    std::string t_start_str = "t_start," + std::to_string(t_start.tv_sec) + "." + std::to_string(t_start.tv_nsec) + ",";
+    std::string t_end_str = "t_end," + std::to_string(t_end.tv_sec) + "." + std::to_string(t_end.tv_nsec) + "\n";
+    std::string result = op_name + t_start_str + t_end_str;
+    std::ofstream file;
+    file.open("TF_prepare.binary", std::ios::out | std::ios::app | std::ios::binary);
+    file << result;
         return status;
       }
 
